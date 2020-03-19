@@ -2,7 +2,7 @@ package unifiedrecharge
 
 import (
 	"context"
-	ap "google.golang.org/api/androidpublisher/v2"
+	ap "google.golang.org/api/androidpublisher/v3"
 	"google.golang.org/api/option"
 	"sync"
 )
