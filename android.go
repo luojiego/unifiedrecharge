@@ -3,15 +3,24 @@ package unifiedrecharge
 import (
 	"context"
 	ap "google.golang.org/api/androidpublisher/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"math"
+	"net/http"
 	"sync"
+	"time"
+	"unsafe"
 )
 
-//call androidpushliser v2
+//call androidpushliser v3
 var (
 	once            sync.Once
 	purchaseService *ap.PurchasesProductsService
 	lastError       error
+)
+
+const (
+	maxTryCount = 5
 )
 
 func getService(configFile string) *ap.PurchasesProductsService {
@@ -35,5 +44,22 @@ func CheckGoogleAndroidPurchase(configFile, packageName, productId, token string
 		return nil, lastError
 	}
 
-	return service.Get(packageName, productId, token).Do()
+	for i := 0; i < maxTryCount; i++ {
+		productPurchase, err = service.Get(packageName, productId, token).Do()
+		if err != nil {
+			//check code, if server error
+			googleErr := (*googleapi.Error)(unsafe.Pointer(&err))
+			if googleErr.Code == http.StatusInternalServerError || googleErr.Code == http.StatusServiceUnavailable {
+				//use exponential backoff algorithm
+				wait := math.Pow(2, float64(i))
+				time.Sleep(time.Duration(wait)*time.Second + time.Duration(time.Now().Nanosecond()%1000)*time.Microsecond)
+				continue
+			} else {
+				//return err
+				return productPurchase, err
+			}
+		}
+	}
+
+	return productPurchase, err
 }
