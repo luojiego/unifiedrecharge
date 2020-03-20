@@ -58,6 +58,8 @@ func CheckGoogleAndroidPurchase(configFile, packageName, productId, token string
 				//return err
 				return productPurchase, err
 			}
+		} else {
+			break
 		}
 	}
 
