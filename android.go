@@ -19,8 +19,8 @@ func getService(configFile string) *ap.PurchasesProductsService {
 		ctx := context.Background()
 		service, err := ap.NewService(ctx, option.WithCredentialsFile(configFile))
 		if err != nil {
-			//fmt.Println("new service err: ", err)
 			lastError = err
+			return
 		}
 
 		purchaseService = ap.NewPurchasesProductsService(service)
