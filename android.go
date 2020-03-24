@@ -14,38 +14,17 @@ import (
 
 //call androidpushliser v3
 var (
-	once            sync.Once
-	purchaseService *ap.PurchasesProductsService
-	lastError       error
+	once           sync.Once
+	androidService *AndroidService
 )
 
-const (
-	maxTryCount = 5
-)
-
-func getService(configFile string) *ap.PurchasesProductsService {
-	once.Do(func() {
-		ctx := context.Background()
-		service, err := ap.NewService(ctx, option.WithCredentialsFile(configFile))
-		if err != nil {
-			lastError = err
-			return
-		}
-
-		purchaseService = ap.NewPurchasesProductsService(service)
-	})
-
-	return purchaseService
+type AndroidService struct {
+	Service *ap.PurchasesProductsService
 }
 
-func CheckGoogleAndroidPurchase(configFile, packageName, productId, token string) (productPurchase *ap.ProductPurchase, err error) {
-	service := getService(configFile)
-	if service == nil {
-		return nil, lastError
-	}
-
+func (a *AndroidService) CheckPurchase(packageName, productId, token string) (productPurchase *ap.ProductPurchase, err error) {
 	for i := 0; i < maxTryCount; i++ {
-		productPurchase, err = service.Get(packageName, productId, token).Do()
+		productPurchase, err = a.Service.Get(packageName, productId, token).Do()
 		if err != nil {
 			//check code, if server error
 			googleErr := (*googleapi.Error)(unsafe.Pointer(&err))
@@ -64,4 +43,17 @@ func CheckGoogleAndroidPurchase(configFile, packageName, productId, token string
 	}
 
 	return productPurchase, err
+}
+
+const (
+	maxTryCount = 5
+)
+
+func NewAndroidService(configFile string) (*AndroidService, error) {
+	ctx := context.Background()
+	service, err := ap.NewService(ctx, option.WithCredentialsFile(configFile))
+	if err != nil {
+		return nil, err
+	}
+	return &AndroidService{Service: ap.NewPurchasesProductsService(service)}, nil
 }
